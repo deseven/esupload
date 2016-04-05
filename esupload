@@ -1,0 +1,82 @@
+#!/bin/bash
+
+# defaults
+remote_user=$USER
+remote_ident=$HOME/.ssh/id_rsa
+random_name=no
+chmod=u+rwx,g+rwx,o+rwx
+is_screenshot=no
+delete_after_upload=no
+
+LC_ALL="en_US.UTF-8"
+PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+CURDIR=$(pwd)
+CFGDIR="$HOME/.esupload"
+
+urlEncode() {
+	echo -n "$1" | perl -MURI::Escape -ne 'print uri_escape($_)'
+}
+
+checkDep() {
+	for prog in "$@"; do
+		command -v $prog >/dev/null 2>&1 || { echo -e "Please install these dependencies first: \n$@" 1>&2 && exit 1; }
+	done
+}
+
+checkDep rsync terminal-notifier sips hexdump
+
+if [ -d "$CFGDIR" ]; then
+	if [ -z "$1" ] || [ -z "$2" ]; then
+		echo "Syntax: esupload config_name file" 1>&2 && exit 1
+	fi
+	source $CFGDIR/$1 > /dev/null 2>&1 || { echo -e "Error while reading config file: $1" 1>&2 && exit 1; }
+	if [ -z "$remote_host" ] || [ -z "$remote_dir" ] || [ -z "$remote_url" ]; then
+		echo -e "Those params are required: \nremote_host remote_dir remote_url\n\nPlease provide them in $CFGDIR/$1" 1>&2 && exit 1
+	fi
+	if [ -f "$2" ]; then
+		id=$(hexdump -n 16 -v -e '/1 "%02X"' /dev/urandom | tr '[:upper:]' '[:lower:]')
+		localfile="$2"
+		localfilename=$(basename "$localfile")
+		localfileext=${localfilename##*.}
+		terminal-notifier -title "$localfilename" -group "$id" -message "uploading" > /dev/null 2>&1
+		if [ "$is_screenshot" == "yes" ]; then
+			tempdir=$(mktemp -d)
+			cp "$localfile" "$tempdir" > /dev/null 2>&1 || echo "Error while copying file to temp dir" 1>&2
+			retina=$(system_profiler SPDisplaysDataType | grep "Retina:" | tr -d '[[:space:]]')
+			if [ "$retina" == "Retina:Yes" ]; then
+				height=$(sips -g pixelHeight "$tempdir/$localfilename" | grep 'pixelHeight' | cut -d: -f2)
+				heighthalf=$(($height / 2))
+				if [ "$heighthalf" -gt "0" ]; then
+					sips --resampleHeight "$heighthalf" "$tempdir/$localfilename" --out "$tempdir/$localfilename" > /dev/null 2>&1
+				fi
+			fi
+			loc="$tempdir/$localfilename"
+		else
+			loc="$localfile"
+		fi
+		if [ "$random_name" == "yes" ]; then
+			rem="$remote_dir/$id.$localfileext"
+			url="$remote_url/"$(urlEncode "$id.$localfileext")
+		else
+			rem="$remote_dir/$localfilename"
+			url="$remote_url/"$(urlEncode "$localfilename")
+		fi
+		rsync --chmod=$chmod -e "ssh -i \"$remote_ident\"" "$loc" "$remote_user@$remote_host:$rem" > /dev/null 2>&1
+		if [ $? -ne 0 ]; then
+	    	terminal-notifier -title "$localfilename" -group "$id" -message "failed to upload" > /dev/null 2>&1
+		else
+			echo "$url" | pbcopy
+			terminal-notifier -title "$localfilename" -group "$id" -message "uploaded" -open "$url" > /dev/null 2>&1
+		fi
+		if [ "$delete_after_upload" == "yes" ]; then
+			rm -f "$localfile" > /dev/null 2>&1
+		fi
+		if [ -d "$tempdir" ]; then
+			rm -rf "$temdir" > /dev/null 2>&1
+		fi
+	else
+		echo "File $2 is not found" 1>&2 && exit 1
+	fi
+else
+	echo -e "Can't find config directory: $HOME/.esupload \nFor more information please visit https://github.com/deseven/esupload" 1>&2 && exit 1
+fi
