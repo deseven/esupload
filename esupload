@@ -1,6 +1,6 @@
 #!/bin/bash
 
-rev="1"
+ver="0.1.2"
 
 # defaults
 remote_user=$USER
