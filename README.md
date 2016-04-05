@@ -7,7 +7,7 @@ rsync
 
 ## installation
 via homebrew:  
-```brew install --HEAD https://raw.githubusercontent.com/deseven/esupload/master/formula/esupload.rb```  
+```brew install http://deseven.info/sys/esupload.rb```  
 manually:  
 ```curl https://raw.githubusercontent.com/deseven/esupload/master/esupload > /usr/local/bin/esupload && chmod +x /usr/local/bin/esupload```  
 
