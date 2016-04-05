@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ver="0.1.2"
+ver="0.1.3"
 
 # defaults
 remote_user=$USER
@@ -12,9 +12,9 @@ delete_after_upload=no
 
 LC_ALL="en_US.UTF-8"
 PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-CURDIR=$(pwd)
 CFGDIR="$HOME/.esupload"
 
+# todo: look for a native way
 urlEncode() {
 	echo -n "$1" | perl -MURI::Escape -ne 'print uri_escape($_)'
 }
@@ -25,13 +25,14 @@ checkDep() {
 	done
 }
 
-checkDep rsync terminal-notifier sips hexdump
+# just to be on the safe side, everything except terminal-notifier should be available out-of-the-box
+checkDep rsync terminal-notifier sips hexdump perl
 
 if [ -d "$CFGDIR" ]; then
 	if [ -z "$1" ] || [ -z "$2" ]; then
 		echo "Syntax: esupload config_name file" 1>&2 && exit 1
 	fi
-	source $CFGDIR/$1 > /dev/null 2>&1 || { echo -e "Error while reading config file: $1" 1>&2 && exit 1; }
+	source "$CFGDIR/$1" > /dev/null 2>&1 || { echo -e "Error while reading profile: $1" 1>&2 && exit 1; }
 	if [ -z "$remote_host" ] || [ -z "$remote_dir" ] || [ -z "$remote_url" ]; then
 		echo -e "Those params are required: \nremote_host remote_dir remote_url\n\nPlease provide them in $CFGDIR/$1" 1>&2 && exit 1
 	fi
@@ -58,16 +59,19 @@ if [ -d "$CFGDIR" ]; then
 		fi
 		if [ "$random_name" == "yes" ]; then
 			rem="$remote_dir/$id.$localfileext"
-			url="$remote_url/"$(urlEncode "$id.$localfileext")
+			url="$remote_url/$id.$localfileext"
+			urlenc="$remote_url/"$(urlEncode "$id.$localfileext")
 		else
 			rem="$remote_dir/$localfilename"
-			url="$remote_url/"$(urlEncode "$localfilename")
+			url="$remote_url/$localfilename"
+			urlenc="$remote_url/"$(urlEncode "$localfilename")
 		fi
+		rem=$(printf %q "$rem")
 		rsync --chmod=$chmod -e "ssh -i \"$remote_ident\"" "$loc" "$remote_user@$remote_host:$rem" > /dev/null 2>&1
 		if [ $? -ne 0 ]; then
 	    	terminal-notifier -title "$localfilename" -group "$id" -message "failed to upload" > /dev/null 2>&1
 		else
-			echo "$url" | pbcopy
+			echo "$urlenc" | pbcopy
 			terminal-notifier -title "$localfilename" -group "$id" -message "uploaded" -open "$url" > /dev/null 2>&1
 		fi
 		if [ "$delete_after_upload" == "yes" ]; then
@@ -80,5 +84,5 @@ if [ -d "$CFGDIR" ]; then
 		echo "File $2 is not found" 1>&2 && exit 1
 	fi
 else
-	echo -e "Can't find config directory: $HOME/.esupload \nFor more information please visit https://github.com/deseven/esupload" 1>&2 && exit 1
+	echo -e "Can't find config directory: $HOME/.esupload \nFor usage information please visit https://github.com/deseven/esupload" 1>&2 && exit 1
 fi
