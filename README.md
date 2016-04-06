@@ -29,7 +29,7 @@ remote_url=http://example.org/share # remote server url for public links
 remote_user=$USER              # ssh user name
 remote_ident=$HOME/.ssh/id_rsa # ssh key
 random_name=no                 # generate random name for file
-chmod=u+rwx,g+rwx,o+rwx        # chmod remote file
+chmod=u=rwx,g=rw,o=r           # chmod remote file
 is_screenshot=no               # yes to resize retina screenshots
 delete_after_upload=no         # delete local file after uploading
 track_progress=no              # track uploading progress

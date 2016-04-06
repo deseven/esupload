@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ver="0.2.0"
+ver="0.2.1"
 
 # defaults
 remote_user=$USER
@@ -90,7 +90,7 @@ if [ -d "$CFGDIR" ]; then
 		if [ $res -ne 0 ]; then
 	    	terminal-notifier -title "$localfilename" -group "$id" -message "failed to upload" > /dev/null 2>&1
 		else
-			echo "$urlenc" | pbcopy
+			echo -n "$urlenc" | pbcopy
 			terminal-notifier -title "$localfilename" -group "$id" -message "uploaded" -open "$url" > /dev/null 2>&1
 		fi
 		if [ "$delete_after_upload" == "yes" ]; then
