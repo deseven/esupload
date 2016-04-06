@@ -1,14 +1,16 @@
 #!/bin/bash
 
-ver="0.1.3"
+ver="0.2.0"
 
 # defaults
 remote_user=$USER
 remote_ident=$HOME/.ssh/id_rsa
 random_name=no
-chmod=u+rwx,g+rwx,o+rwx
+chmod=u=rwx,g=rw,o=r
 is_screenshot=no
 delete_after_upload=no
+track_progress=no
+track_interval=30
 
 LC_ALL="en_US.UTF-8"
 PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -25,8 +27,8 @@ checkDep() {
 	done
 }
 
-# just to be on the safe side, everything except terminal-notifier should be available out-of-the-box
-checkDep rsync terminal-notifier sips hexdump perl
+# just to be on the safe side, everything except terminal-notifier and pv should be available out-of-the-box
+checkDep pv terminal-notifier sips hexdump perl
 
 if [ -d "$CFGDIR" ]; then
 	if [ -z "$1" ] || [ -z "$2" ]; then
@@ -66,9 +68,26 @@ if [ -d "$CFGDIR" ]; then
 			url="$remote_url/$localfilename"
 			urlenc="$remote_url/"$(urlEncode "$localfilename")
 		fi
-		rem=$(printf %q "$rem")
-		rsync --chmod=$chmod -e "ssh -i \"$remote_ident\"" "$loc" "$remote_user@$remote_host:$rem" > /dev/null 2>&1
-		if [ $? -ne 0 ]; then
+		if [ "$track_progress" == "yes" ]; then
+			res=1
+			while read line; do
+				if [ "$line" -eq "$line" ] 2>/dev/null; then # is it a number?
+					if [ "$line" != "100" ] && [ "$line" != "0" ]; then
+						terminal-notifier -title "$localfilename" -group "$id" -message "$line% uploaded" > /dev/null 2>&1
+					fi
+				elif [ "$line" == "res:0 0" ]; then
+					res=0	
+				fi
+			done < <((pv -n -i $track_interval "$loc" | ssh -q -i "$remote_ident" "$remote_user@$remote_host" "cat > '$rem' && chmod $chmod '$rem'"; echo "res:${PIPESTATUS[*]}") 2>&1)
+			# what's happening here:
+			# we're sending a file through pv and ssh, since scp and rsync can't read files from stdin and there is no reliable way to monitor their progress
+			# after that we're also reading PIPESTATUS to check the result 
+		else
+			rem=$(printf %q "$rem")
+			rsync --chmod=$chmod -e "ssh -i \"$remote_ident\"" "$loc" "$remote_user@$remote_host:$rem" > /dev/null 2>&1
+			res=$?
+		fi
+		if [ $res -ne 0 ]; then
 	    	terminal-notifier -title "$localfilename" -group "$id" -message "failed to upload" > /dev/null 2>&1
 		else
 			echo "$urlenc" | pbcopy
@@ -84,5 +103,5 @@ if [ -d "$CFGDIR" ]; then
 		echo "File $2 is not found" 1>&2 && exit 1
 	fi
 else
-	echo -e "Can't find config directory: $HOME/.esupload \nFor usage information please visit https://github.com/deseven/esupload" 1>&2 && exit 1
+	echo -e "Can't find config directory: $CFGDIR \nFor usage information please visit https://github.com/deseven/esupload" 1>&2 && exit 1
 fi

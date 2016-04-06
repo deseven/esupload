@@ -32,6 +32,8 @@ random_name=no                 # generate random name for file
 chmod=u+rwx,g+rwx,o+rwx        # chmod remote file
 is_screenshot=no               # yes to resize retina screenshots
 delete_after_upload=no         # delete local file after uploading
+track_progress=no              # track uploading progress
+track_interval=30              # tracking interval in sec
 ```
 
 ## automator integration
