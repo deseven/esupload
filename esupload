@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ver="0.2.2"
+ver="0.3.0"
 
 # defaults
 remote_user=$USER
@@ -25,6 +25,10 @@ checkDep() {
 	for prog in "$@"; do
 		command -v $prog >/dev/null 2>&1 || { echo -e "Please install these dependencies first: \n$@" 1>&2 && exit 1; }
 	done
+}
+
+nameGen() {
+	perl -e 'srand; open FILE, "</usr/share/dict/words"; @arr=<FILE>; $name = ucfirst($arr[rand @arr]).ucfirst($arr[rand @arr]).ucfirst($arr[rand @arr]); $name =~ s/\R//g; print $name;'
 }
 
 # just to be on the safe side, everything except terminal-notifier and pv should be available out-of-the-box
@@ -63,6 +67,11 @@ if [ -d "$CFGDIR" ]; then
 			rem="$remote_dir/$id.$localfileext"
 			url="$remote_url/$id.$localfileext"
 			urlenc="$remote_url/"$(urlEncode "$id.$localfileext")
+		elif [ "$random_name" == "namegen" ]; then
+			namegen=$(nameGen)
+			rem="$remote_dir/$namegen.$localfileext"
+			url="$remote_url/$namegen.$localfileext"
+			urlenc="$remote_url/"$(urlEncode "$namegen.$localfileext")
 		else
 			rem="$remote_dir/$localfilename"
 			url="$remote_url/$localfilename"

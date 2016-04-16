@@ -1,5 +1,6 @@
 ## esupload
 A tool for uploading files via SSH to your own server and pasting direct links in your clipboard.  
+Deisgned for OS X.  
 
 ## dependencies
 rsync  
@@ -29,7 +30,7 @@ remote_url=http://example.org/share # remote server url for public links
 # optional (defaults)
 remote_user=$USER              # ssh user name
 remote_ident=$HOME/.ssh/id_rsa # ssh key
-random_name=no                 # generate random name for file
+random_name=no                 # 'yes' for 16 symbols, 'namegen' for 3 words
 chmod=u=rwx,g=rw,o=r           # chmod remote file
 is_screenshot=no               # yes to resize retina screenshots
 delete_after_upload=no         # delete local file after uploading
@@ -39,3 +40,4 @@ track_interval=30              # tracking interval in sec
 
 ## automator integration
 You can easilly use Automator for uploading screenshots or other files, for more info refer to [this](http://apple.blogoverflow.com/2012/06/folder-actions-tutorial-automation-meet-the-filesystem/) or [this](http://computers.tutsplus.com/tutorials/quick-tip-use-folder-actions-to-speed-up-productivity-in-os-x--mac-45394) article.  
+A complete guide in russian available [here](https://geektimes.ru/post/273944/).  
