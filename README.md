@@ -33,6 +33,8 @@ remote_ident=$HOME/.ssh/id_rsa # ssh key
 random_name=no                 # 'yes' for 16 symbols, 'namegen' for 3 words
 chmod=u=rwx,g=rw,o=r           # chmod remote file
 is_screenshot=no               # yes to resize retina screenshots
+screenshot_direct=no           # use screencapture to make screenshots directly
+screenshot_direct_format=png   # screenshot format
 delete_after_upload=no         # delete local file after uploading
 track_progress=no              # track uploading progress
 track_interval=30              # tracking interval in sec

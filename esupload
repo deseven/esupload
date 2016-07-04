@@ -1,6 +1,7 @@
 #!/bin/bash
 
-ver="0.3.0"
+ver="0.4.0"
+syntax="Syntax: $0 config_name [file]"
 
 # defaults
 remote_user=$USER
@@ -8,6 +9,8 @@ remote_ident=$HOME/.ssh/id_rsa
 random_name=no
 chmod=u=rwx,g=rw,o=r
 is_screenshot=no
+screenshot_direct=no
+screenshot_direct_format=png
 delete_after_upload=no
 track_progress=no
 track_interval=30
@@ -31,26 +34,39 @@ nameGen() {
 	perl -e 'srand; open FILE, "</usr/share/dict/words"; @arr=<FILE>; $name = ucfirst($arr[rand @arr]).ucfirst($arr[rand @arr]).ucfirst($arr[rand @arr]); $name =~ s/\R//g; print $name;'
 }
 
+cleanUp() {
+	if [ -d "$1" ]; then
+		rm -rf "$1" > /dev/null 2>&1
+	fi
+}
+
 # just to be on the safe side, everything except terminal-notifier and pv should be available out-of-the-box
-checkDep pv terminal-notifier sips hexdump perl
+checkDep pv terminal-notifier sips screencapture hexdump perl
+
+tempdir=$(mktemp -d)
+trap "{ cleanUp $tempdir; }" EXIT SIGINT SIGTERM
 
 if [ -d "$CFGDIR" ]; then
-	if [ -z "$1" ] || [ -z "$2" ]; then
-		echo "Syntax: esupload config_name file" 1>&2 && exit 1
-	fi
+	if [ -z "$1" ]; then echo $syntax 1>&2 && exit 1; fi
 	source "$CFGDIR/$1" > /dev/null 2>&1 || { echo -e "Error while reading profile: $1" 1>&2 && exit 1; }
 	if [ -z "$remote_host" ] || [ -z "$remote_dir" ] || [ -z "$remote_url" ]; then
 		echo -e "Those params are required: \nremote_host remote_dir remote_url\n\nPlease provide them in $CFGDIR/$1" 1>&2 && exit 1
 	fi
-	if [ -f "$2" ]; then
-		id=$(hexdump -n 16 -v -e '/1 "%02X"' /dev/urandom | tr '[:upper:]' '[:lower:]')
-		localfile="$2"
+	id=$(hexdump -n 16 -v -e '/1 "%02X"' /dev/urandom | tr '[:upper:]' '[:lower:]')
+	localfile="$2"
+	if [ "$screenshot_direct" == "yes" ]; then
+		localfile="$tempdir/$id.$screenshot_direct_format"
+		screencapture -i -r -t $screenshot_direct_format $localfile > /dev/null 2>&1
+	fi
+	if [ -z "$localfile" ]; then echo $syntax 1>&2 && exit 1; fi
+	if [ -f "$localfile" ]; then
 		localfilename=$(basename "$localfile")
 		localfileext=${localfilename##*.}
 		terminal-notifier -title "$localfilename" -group "$id" -message "uploading" > /dev/null 2>&1
 		if [ "$is_screenshot" == "yes" ]; then
-			tempdir=$(mktemp -d)
-			cp "$localfile" "$tempdir" > /dev/null 2>&1 || echo "Error while copying file to temp dir" 1>&2
+			if [ "$screenshot_direct" != "yes" ]; then
+				cp "$localfile" "$tempdir" > /dev/null 2>&1 || echo "Error while copying file to temp dir" 1>&2
+			fi
 			retina=$(system_profiler SPDisplaysDataType | grep "Retina:" | tr -d '[[:space:]]')
 			if [ "$retina" == "Retina:Yes" ]; then
 				height=$(sips -g pixelHeight "$tempdir/$localfilename" | grep 'pixelHeight' | cut -d: -f2)
@@ -107,11 +123,8 @@ if [ -d "$CFGDIR" ]; then
 		if [ "$delete_after_upload" == "yes" ]; then
 			rm -f "$localfile" > /dev/null 2>&1
 		fi
-		if [ -d "$tempdir" ]; then
-			rm -rf "$temdir" > /dev/null 2>&1
-		fi
 	else
-		echo "File $2 is not found" 1>&2 && exit 1
+		echo "File $localfile is not found" 1>&2 && exit 1
 	fi
 else
 	echo -e "Can't find config directory: $CFGDIR \nFor usage information please visit https://github.com/deseven/esupload" 1>&2 && exit 1
