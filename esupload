@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ver="0.4.0"
+ver="0.4.1"
 syntax="Syntax: $0 config_name [file]"
 
 # defaults
@@ -68,7 +68,8 @@ if [ -d "$CFGDIR" ]; then
 				cp "$localfile" "$tempdir" > /dev/null 2>&1 || echo "Error while copying file to temp dir" 1>&2
 			fi
 			retina=$(system_profiler SPDisplaysDataType | grep "Retina:" | tr -d '[[:space:]]')
-			if [ "$retina" == "Retina:Yes" ]; then
+			retina10124=$(system_profiler SPDisplaysDataType | grep "Resolution:.*Retina" | wc -l | tr -d '[[:space:]]')
+			if [ "$retina" == "Retina:Yes" ] || [ "$retina10124" == "1" ]; then
 				height=$(sips -g pixelHeight "$tempdir/$localfilename" | grep 'pixelHeight' | cut -d: -f2)
 				heighthalf=$(($height / 2))
 				if [ "$heighthalf" -gt "0" ]; then
